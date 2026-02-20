@@ -1,1 +1,108 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>English Trainer</title>
 
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#111827" />
+
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background:#0b1220; color:#e5e7eb; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+    .card { background:#111827; border:1px solid #1f2937; border-radius: 14px; padding: 14px; margin: 12px 0; }
+    h1 { font-size: 20px; margin: 0 0 10px; }
+    .row { display:flex; gap:10px; flex-wrap: wrap; }
+    input, button, select { font-size: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid #374151; background:#0b1220; color:#e5e7eb; }
+    input { flex:1; min-width: 220px; }
+    button { cursor: pointer; }
+    button.primary { background:#2563eb; border-color:#2563eb; }
+    button.danger { background:#dc2626; border-color:#dc2626; }
+    .muted { color:#9ca3af; font-size: 14px; }
+    .big { font-size: 22px; font-weight: 700; }
+    .ok { color:#34d399; }
+    .bad { color:#fb7185; }
+    .hidden { display:none; }
+    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; border:1px solid #374151; background:#0b1220; font-size: 13px; color:#cbd5e1; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>English Trainer (офлайн)</h1>
+    <div class="muted">Додаєш слова → тренуєшся. Дані зберігаються на телефоні (localStorage).</div>
+
+    <div class="card">
+      <div class="row">
+        <button id="tabAdd" class="primary">Додати слова</button>
+        <button id="tabTrain">Тренування</button>
+        <button id="tabStats">Статистика</button>
+      </div>
+    </div>
+
+    <!-- ADD -->
+    <div id="viewAdd" class="card">
+      <div class="row">
+        <input id="uaInput" placeholder="UA (наприклад: ліс)" />
+        <input id="enInput" placeholder="EN (наприклад: forest)" />
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button id="addBtn" class="primary">Додати</button>
+        <button id="importBtn">Імпорт JSON</button>
+        <button id="exportBtn">Експорт JSON</button>
+        <button id="clearBtn" class="danger">Очистити все</button>
+      </div>
+      <p class="muted" style="margin:10px 0 0;">
+        Порада: можеш додавати кілька варіантів EN через <b>;</b> (наприклад: <i>forest; woods</i>).
+      </p>
+      <input id="fileInput" type="file" accept="application/json" class="hidden" />
+    </div>
+
+    <!-- TRAIN -->
+    <div id="viewTrain" class="card hidden">
+      <div class="row">
+        <select id="modeSelect">
+          <option value="ua2en" selected>UA → EN</option>
+          <option value="en2ua">EN → UA</option>
+        </select>
+        <button id="nextBtn" class="primary">Наступне</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="muted">Слово:</div>
+        <div id="prompt" class="big">—</div>
+        <div style="margin-top:10px;" class="row">
+          <input id="answerInput" placeholder="Введи переклад…" />
+          <button id="checkBtn" class="primary">Перевірити</button>
+        </div>
+        <div id="feedback" style="margin-top:10px;"></div>
+        <div style="margin-top:10px;" class="muted">
+          Сесія: <span id="sessionPill" class="pill">0 / 0</span>
+          &nbsp; Правильно: <span id="okCount" class="pill">0</span>
+          &nbsp; Помилки: <span id="failCount" class="pill">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div id="viewStats" class="card hidden">
+      <div class="row">
+        <button id="refreshStats" class="primary">Оновити</button>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="muted">Всього слів:</div>
+        <div id="totalWords" class="big">0</div>
+
+        <div style="margin-top:12px;" class="muted">Топ “важких” (найбільше помилок):</div>
+        <div id="hardList" class="muted">—</div>
+      </div>
+    </div>
+
+    <div class="muted" style="margin: 14px 0 24px;">
+      Щоб встановити: Chrome → меню ⋮ → <b>Додати на головний екран</b>.
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
