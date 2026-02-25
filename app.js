@@ -69,6 +69,7 @@ const failCountEl = document.getElementById("failCount");
 const refreshStats = document.getElementById("refreshStats");
 const totalWordsEl = document.getElementById("totalWords");
 const hardListEl = document.getElementById("hardList");
+const wordListEl = document.getElementById("wordList");
 
 // -------- App state --------
 let words = loadWords();
@@ -300,3 +301,4 @@ if ("serviceWorker" in navigator) {
 show("add");
 updateStats();
 updateSessionUI();
+
