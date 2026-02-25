@@ -260,6 +260,58 @@ function updateStats() {
   hardListEl.innerHTML = hard
     .map(w => `• <b>${escapeHtml(w.ua)}</b> → ${escapeHtml(w.en)} <span class="pill">fail: ${w.fail || 0}</span>`)
     .join("<br>");
+  renderWordList();
+}
+function renderWordList() {
+  if (!wordListEl) return;
+
+  if (words.length === 0) {
+    wordListEl.textContent = "—";
+    return;
+  }
+
+  wordListEl.innerHTML = words.map((w, i) => `
+    <div style="display:flex; gap:8px; align-items:center; margin:6px 0; flex-wrap:wrap;">
+      <span class="pill">${i + 1}</span>
+      <span><b>${escapeHtml(w.ua)}</b> → ${escapeHtml(w.en)}</span>
+      <button data-edit="${i}">Редагувати</button>
+      <button data-del="${i}" class="danger">Видалити</button>
+    </div>
+  `).join("");
+
+  // Видалення
+  wordListEl.querySelectorAll("button[data-del]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.getAttribute("data-del"));
+      if (!confirm("Видалити це слово?")) return;
+      words.splice(idx, 1);
+      saveWords(words);
+      updateStats();
+      updateSessionUI();
+      renderWordList();
+    });
+  });
+
+  // Редагування
+  wordListEl.querySelectorAll("button[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.getAttribute("data-edit"));
+      const old = words[idx];
+
+      const newUa = prompt("UA:", old.ua);
+      if (newUa === null) return;
+
+      const newEn = prompt("EN (можна варіанти через ;):", old.en);
+      if (newEn === null) return;
+
+      words[idx].ua = newUa.trim();
+      words[idx].en = newEn.trim();
+      saveWords(words);
+
+      updateStats();
+      renderWordList();
+    });
+  });
 }
 
 // -------- Tabs --------
@@ -300,5 +352,7 @@ if ("serviceWorker" in navigator) {
 // init
 show("add");
 updateStats();
+renderWordList();
 updateSessionUI();
+
 
