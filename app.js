@@ -32,7 +32,7 @@ function pickRandomIndex(n) {
 }
 
 function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) => ({
+  return String(s).replace(/[&<>"']/g, (c) => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
   }[c]));
 }
@@ -69,6 +69,8 @@ const failCountEl = document.getElementById("failCount");
 const refreshStats = document.getElementById("refreshStats");
 const totalWordsEl = document.getElementById("totalWords");
 const hardListEl = document.getElementById("hardList");
+
+// NEW: list for edit/delete
 const wordListEl = document.getElementById("wordList");
 
 // -------- App state --------
@@ -135,7 +137,6 @@ function checkAnswer() {
   const item = words[currentIndex];
   const mode = modeSelect.value;
   const user = norm(answerInput.value);
-
   if (!user) return;
 
   asked += 1;
@@ -165,6 +166,7 @@ function checkAnswer() {
 
   saveWords(words);
   updateSessionUI();
+  updateStats(); // so stats reflect new fails
 }
 
 // -------- Add word --------
@@ -210,14 +212,13 @@ function importJson(file) {
       const data = JSON.parse(reader.result);
       if (!Array.isArray(data)) throw new Error("JSON має бути масивом");
 
-      // Basic validation + normalization
       const cleaned = data
         .filter(x => x && typeof x.ua === "string" && typeof x.en === "string")
         .map(x => ({
           ua: x.ua.trim(),
           en: x.en.trim(),
           ok: Number(x.ok || 0),
-          fail: Number(x.fail || 0)
+          fail: Number(x.fail || 0),
         }))
         .filter(x => x.ua && x.en);
 
@@ -244,26 +245,7 @@ function clearAll() {
   pickNext();
 }
 
-// -------- Stats --------
-function updateStats() {
-  totalWordsEl.textContent = `${words.length}`;
-
-  if (words.length === 0) {
-    hardListEl.textContent = "—";
-    renderWordList();
-    return;
-}
-  }
-
-  const hard = [...words]
-    .sort((a, b) => (b.fail || 0) - (a.fail || 0))
-    .slice(0, 10);
-
-  hardListEl.innerHTML = hard
-    .map(w => `• <b>${escapeHtml(w.ua)}</b> → ${escapeHtml(w.en)} <span class="pill">fail: ${w.fail || 0}</span>`)
-    .join("<br>");
-  renderWordList();
-}
+// -------- Word list (Edit/Delete) --------
 function renderWordList() {
   if (!wordListEl) return;
 
@@ -281,24 +263,32 @@ function renderWordList() {
     </div>
   `).join("");
 
-  // Видалення
+  // delete handlers
   wordListEl.querySelectorAll("button[data-del]").forEach(btn => {
     btn.addEventListener("click", () => {
       const idx = Number(btn.getAttribute("data-del"));
+      if (!Number.isFinite(idx)) return;
       if (!confirm("Видалити це слово?")) return;
+
       words.splice(idx, 1);
       saveWords(words);
+
+      // safety: if currentIndex now out of range
+      if (currentIndex >= words.length) currentIndex = -1;
+
       updateStats();
       updateSessionUI();
-      renderWordList();
     });
   });
 
-  // Редагування
+  // edit handlers
   wordListEl.querySelectorAll("button[data-edit]").forEach(btn => {
     btn.addEventListener("click", () => {
       const idx = Number(btn.getAttribute("data-edit"));
+      if (!Number.isFinite(idx)) return;
+
       const old = words[idx];
+      if (!old) return;
 
       const newUa = prompt("UA:", old.ua);
       if (newUa === null) return;
@@ -306,14 +296,41 @@ function renderWordList() {
       const newEn = prompt("EN (можна варіанти через ;):", old.en);
       if (newEn === null) return;
 
-      words[idx].ua = newUa.trim();
-      words[idx].en = newEn.trim();
+      const ua = newUa.trim();
+      const en = newEn.trim();
+      if (!ua || !en) {
+        alert("UA і EN не можуть бути порожні.");
+        return;
+      }
+
+      words[idx].ua = ua;
+      words[idx].en = en;
       saveWords(words);
 
       updateStats();
-      renderWordList();
     });
   });
+}
+
+// -------- Stats --------
+function updateStats() {
+  totalWordsEl.textContent = `${words.length}`;
+
+  if (words.length === 0) {
+    hardListEl.textContent = "—";
+    renderWordList();
+    return;
+  }
+
+  const hard = [...words]
+    .sort((a, b) => (b.fail || 0) - (a.fail || 0))
+    .slice(0, 10);
+
+  hardListEl.innerHTML = hard
+    .map(w => `• <b>${escapeHtml(w.ua)}</b> → ${escapeHtml(w.en)} <span class="pill">fail: ${w.fail || 0}</span>`)
+    .join("<br>");
+
+  renderWordList();
 }
 
 // -------- Tabs --------
@@ -354,8 +371,4 @@ if ("serviceWorker" in navigator) {
 // init
 show("add");
 updateStats();
-renderWordList();
 updateSessionUI();
-
-
-
