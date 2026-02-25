@@ -250,7 +250,9 @@ function updateStats() {
 
   if (words.length === 0) {
     hardListEl.textContent = "—";
+    renderWordList();
     return;
+}
   }
 
   const hard = [...words]
@@ -354,5 +356,6 @@ show("add");
 updateStats();
 renderWordList();
 updateSessionUI();
+
 
 
