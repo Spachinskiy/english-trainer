@@ -79,11 +79,13 @@ const wordListEl = document.getElementById("wordList");
 let words = loadWords();
 
 // training session state
-let currentIndex = -1;
+let currentIndex = -1;      // index in `words`
+let lastIndex = -1;         // previous index (avoid repeats)
 let asked = 0;
 let ok = 0;
 let fail = 0;
 
+// -------- View --------
 function show(view) {
   viewAdd.classList.add("hidden");
   viewTrain.classList.add("hidden");
@@ -107,8 +109,14 @@ function show(view) {
   }
 }
 
+function activeCount() {
+  return words.filter(w => w.active !== false).length;
+}
+
 function updateSessionUI() {
-  sessionPill.textContent = `${asked} / ${words.length}`;
+  // show progress relative to active words (not all)
+  const totalActive = activeCount();
+  sessionPill.textContent = `${asked} / ${totalActive}`;
   okCountEl.textContent = `${ok}`;
   failCountEl.textContent = `${fail}`;
 }
@@ -120,23 +128,30 @@ function setFeedback(html, kind) {
 
 // -------- Training --------
 function pickNext() {
-  if (words.length === 0) {
-    promptEl.textContent = "Спочатку додай слова";
-    setFeedback("", "");
-    currentIndex = -1;
-    return;
-  }
-
   const activeWords = words.filter(w => w.active !== false);
+
   if (activeWords.length === 0) {
-    promptEl.textContent = "Немає активних слів";
+    promptEl.textContent = words.length === 0 ? "Спочатку додай слова" : "Немає активних слів";
     setFeedback("", "");
     currentIndex = -1;
+    answerInput.value = "";
     return;
   }
 
-  const item = activeWords[pickRandomIndex(activeWords.length)];
+  // avoid repeating same word if possible
+  let item;
+  if (activeWords.length === 1) {
+    item = activeWords[0];
+  } else {
+    let tries = 0;
+    do {
+      item = activeWords[pickRandomIndex(activeWords.length)];
+      tries++;
+    } while (words.indexOf(item) === lastIndex && tries < 10);
+  }
+
   currentIndex = words.indexOf(item);
+  lastIndex = currentIndex;
 
   const mode = modeSelect.value;
 
@@ -188,7 +203,7 @@ function checkAnswer() {
 
   saveWords(words);
   updateSessionUI();
-  updateStats();
+  updateStats(); // stats reflect new fail/ok
 }
 
 // -------- Add word --------
@@ -269,6 +284,8 @@ function clearAll() {
   ok = 0;
   fail = 0;
   asked = 0;
+  currentIndex = -1;
+  lastIndex = -1;
 
   updateStats();
   updateSessionUI();
@@ -307,7 +324,14 @@ function renderWordList() {
       words[idx].active = words[idx].active === false ? true : false;
       saveWords(words);
 
+      // if current word was disabled - pick new one
+      if (idx === currentIndex && words[idx].active === false) {
+        currentIndex = -1;
+        pickNext();
+      }
+
       updateStats();
+      updateSessionUI();
     });
   });
 
@@ -322,9 +346,11 @@ function renderWordList() {
       saveWords(words);
 
       if (currentIndex >= words.length) currentIndex = -1;
+      if (lastIndex >= words.length) lastIndex = -1;
 
       updateStats();
       updateSessionUI();
+      pickNext();
     });
   });
 
@@ -389,7 +415,9 @@ tabStats.addEventListener("click", () => { show("stats"); updateStats(); });
 addBtn.addEventListener("click", addWord);
 enInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addWord(); });
 
+// Next = skip (also works as "пропустити")
 nextBtn.addEventListener("click", pickNext);
+
 checkBtn.addEventListener("click", checkAnswer);
 answerInput.addEventListener("keydown", (e) => { if (e.key === "Enter") checkAnswer(); });
 
