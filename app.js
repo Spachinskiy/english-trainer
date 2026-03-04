@@ -114,9 +114,16 @@ function pickNext() {
     currentIndex = -1;
     return;
   }
-  currentIndex = pickRandomIndex(words.length);
+ 
+  const activeWords = words.filter(w => w.active !== false);
 
-  const item = words[currentIndex];
+  if (activeWords.length === 0) {
+    promptEl.textContent = "Немає активних слів";
+    return;
+}
+
+const item = activeWords[pickRandomIndex(activeWords.length)];
+currentIndex = words.indexOf(item);
   const mode = modeSelect.value;
 
   if (mode === "ua2en") {
@@ -179,7 +186,7 @@ function addWord() {
     return;
   }
 
-  words.push({ ua, en, ok: 0, fail: 0 });
+  words.push({ ua, en, ok: 0, fail: 0, active: true });
   saveWords(words);
 
   uaInput.value = "";
@@ -258,12 +265,24 @@ function renderWordList() {
     <div style="display:flex; gap:8px; align-items:center; margin:6px 0; flex-wrap:wrap;">
       <span class="pill">${i + 1}</span>
       <span><b>${escapeHtml(w.ua)}</b> → ${escapeHtml(w.en)}</span>
+      <button data-toggle="${i}">
+        ${w.active === false ? "Увімкнути" : "Вимкнути"}
+      </button>
       <button data-edit="${i}">Редагувати</button>
       <button data-del="${i}" class="danger">Видалити</button>
     </div>
   `).join("");
 
   // delete handlers
+  wordListEl.querySelectorAll("button[data-toggle]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const idx = Number(btn.getAttribute("data-toggle"));
+    words[idx].active = words[idx].active === false ? true : false;
+
+    saveWords(words);
+    updateStats();
+  });
+});
   wordListEl.querySelectorAll("button[data-del]").forEach(btn => {
     btn.addEventListener("click", () => {
       const idx = Number(btn.getAttribute("data-del"));
@@ -372,3 +391,4 @@ if ("serviceWorker" in navigator) {
 show("add");
 updateStats();
 updateSessionUI();
+
