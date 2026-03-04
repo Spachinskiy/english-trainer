@@ -33,7 +33,11 @@ function pickRandomIndex(n) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
   }[c]));
 }
 
@@ -69,8 +73,6 @@ const failCountEl = document.getElementById("failCount");
 const refreshStats = document.getElementById("refreshStats");
 const totalWordsEl = document.getElementById("totalWords");
 const hardListEl = document.getElementById("hardList");
-
-// NEW: list for edit/delete
 const wordListEl = document.getElementById("wordList");
 
 // -------- App state --------
@@ -91,9 +93,18 @@ function show(view) {
   tabTrain.classList.remove("primary");
   tabStats.classList.remove("primary");
 
-  if (view === "add") { viewAdd.classList.remove("hidden"); tabAdd.classList.add("primary"); }
-  if (view === "train") { viewTrain.classList.remove("hidden"); tabTrain.classList.add("primary"); }
-  if (view === "stats") { viewStats.classList.remove("hidden"); tabStats.classList.add("primary"); }
+  if (view === "add") {
+    viewAdd.classList.remove("hidden");
+    tabAdd.classList.add("primary");
+  }
+  if (view === "train") {
+    viewTrain.classList.remove("hidden");
+    tabTrain.classList.add("primary");
+  }
+  if (view === "stats") {
+    viewStats.classList.remove("hidden");
+    tabStats.classList.add("primary");
+  }
 }
 
 function updateSessionUI() {
@@ -107,6 +118,7 @@ function setFeedback(html, kind) {
   feedbackEl.innerHTML = html;
 }
 
+// -------- Training --------
 function pickNext() {
   if (words.length === 0) {
     promptEl.textContent = "Спочатку додай слова";
@@ -114,16 +126,18 @@ function pickNext() {
     currentIndex = -1;
     return;
   }
- 
-  const activeWords = words.filter(w => w.active !== false);
 
+  const activeWords = words.filter(w => w.active !== false);
   if (activeWords.length === 0) {
     promptEl.textContent = "Немає активних слів";
+    setFeedback("", "");
+    currentIndex = -1;
     return;
-}
+  }
 
-const item = activeWords[pickRandomIndex(activeWords.length)];
-currentIndex = words.indexOf(item);
+  const item = activeWords[pickRandomIndex(activeWords.length)];
+  currentIndex = words.indexOf(item);
+
   const mode = modeSelect.value;
 
   if (mode === "ua2en") {
@@ -141,6 +155,7 @@ currentIndex = words.indexOf(item);
 
 function checkAnswer() {
   if (currentIndex < 0) return;
+
   const item = words[currentIndex];
   const mode = modeSelect.value;
   const user = norm(answerInput.value);
@@ -173,7 +188,7 @@ function checkAnswer() {
 
   saveWords(words);
   updateSessionUI();
-  updateStats(); // so stats reflect new fails
+  updateStats();
 }
 
 // -------- Add word --------
@@ -193,6 +208,7 @@ function addWord() {
   enInput.value = "";
   uaInput.focus();
   alert("Додано ✅");
+
   updateStats();
   updateSessionUI();
 }
@@ -226,11 +242,13 @@ function importJson(file) {
           en: x.en.trim(),
           ok: Number(x.ok || 0),
           fail: Number(x.fail || 0),
+          active: x.active === false ? false : true
         }))
         .filter(x => x.ua && x.en);
 
       words = cleaned;
       saveWords(words);
+
       alert(`Імпортовано: ${words.length} слів ✅`);
       updateStats();
       updateSessionUI();
@@ -244,15 +262,20 @@ function importJson(file) {
 
 function clearAll() {
   if (!confirm("Точно очистити все? Це видалить всі слова.")) return;
+
   words = [];
   saveWords(words);
-  ok = 0; fail = 0; asked = 0;
+
+  ok = 0;
+  fail = 0;
+  asked = 0;
+
   updateStats();
   updateSessionUI();
   pickNext();
 }
 
-// -------- Word list (Edit/Delete) --------
+// -------- Word list (Edit/Delete/Toggle) --------
 function renderWordList() {
   if (!wordListEl) return;
 
@@ -265,24 +288,30 @@ function renderWordList() {
     <div style="display:flex; gap:8px; align-items:center; margin:6px 0; flex-wrap:wrap;">
       <span class="pill">${i + 1}</span>
       <span><b>${escapeHtml(w.ua)}</b> → ${escapeHtml(w.en)}</span>
+
       <button data-toggle="${i}">
         ${w.active === false ? "Увімкнути" : "Вимкнути"}
       </button>
+
       <button data-edit="${i}">Редагувати</button>
       <button data-del="${i}" class="danger">Видалити</button>
     </div>
   `).join("");
 
-  // delete handlers
+  // toggle handlers
   wordListEl.querySelectorAll("button[data-toggle]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const idx = Number(btn.getAttribute("data-toggle"));
-    words[idx].active = words[idx].active === false ? true : false;
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.getAttribute("data-toggle"));
+      if (!Number.isFinite(idx)) return;
 
-    saveWords(words);
-    updateStats();
+      words[idx].active = words[idx].active === false ? true : false;
+      saveWords(words);
+
+      updateStats();
+    });
   });
-});
+
+  // delete handlers
   wordListEl.querySelectorAll("button[data-del]").forEach(btn => {
     btn.addEventListener("click", () => {
       const idx = Number(btn.getAttribute("data-del"));
@@ -292,7 +321,6 @@ function renderWordList() {
       words.splice(idx, 1);
       saveWords(words);
 
-      // safety: if currentIndex now out of range
       if (currentIndex >= words.length) currentIndex = -1;
 
       updateStats();
@@ -324,8 +352,8 @@ function renderWordList() {
 
       words[idx].ua = ua;
       words[idx].en = en;
-      saveWords(words);
 
+      saveWords(words);
       updateStats();
     });
   });
@@ -363,9 +391,7 @@ enInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addWord(); }
 
 nextBtn.addEventListener("click", pickNext);
 checkBtn.addEventListener("click", checkAnswer);
-answerInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") checkAnswer();
-});
+answerInput.addEventListener("keydown", (e) => { if (e.key === "Enter") checkAnswer(); });
 
 modeSelect.addEventListener("change", () => pickNext());
 
@@ -391,4 +417,3 @@ if ("serviceWorker" in navigator) {
 show("add");
 updateStats();
 updateSessionUI();
-
